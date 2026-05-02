@@ -1,0 +1,4 @@
+dxcam
+pygame
+numpy
+PyOpenGL
