@@ -254,22 +254,37 @@ def main():
                 print("Camera recovered.")
                 return
             except Exception:
-                stop_event.wait(min(1.0 * (attempt + 1), 5.0))
+                stop_event.wait(min(0.25 * (attempt + 1), 5.0))
         print("Warning: camera recovery failed after 20 attempts — display frozen.", file=sys.stderr)
 
     _FRAME_INTERVAL = 1.0 / args.fps
+    _STALE_TIMEOUT  = 2.0
 
     def _capture_loop():
+        last_frame_time = time.monotonic()
         while not stop_event.is_set():
             t0 = time.monotonic()
+
+            if cam_ref[0] is None:
+                _recreate_camera()
+                last_frame_time = time.monotonic()
+                continue
+
             try:
                 f = cam_ref[0].grab()
             except Exception:
                 _recreate_camera()
+                last_frame_time = time.monotonic()
                 continue
+
             if f is not None:
                 with frame_lock:
                     latest_frame[0] = f
+                last_frame_time = time.monotonic()
+            elif time.monotonic() - last_frame_time > _STALE_TIMEOUT:
+                _recreate_camera()
+                last_frame_time = time.monotonic()
+
             elapsed = time.monotonic() - t0
             remaining = _FRAME_INTERVAL - elapsed
             if remaining > 0:
