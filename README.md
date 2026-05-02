@@ -24,26 +24,26 @@ Overscan Bypass works around all of these: it pre-shrinks the image in software 
 ## How it works
 
 ```
-┌─────────────────────────────────────┐
-│  Source monitor (captured)          │
-│  e.g. your primary desktop          │
-└─────────────────────────────────────┘
+┌────────────────────────────────────┐
+│  Source monitor (captured)         │
+│  e.g. your primary desktop         │
+└────────────────────────────────────┘
             │  capture
             ▼
-┌─────────────────────────────────────┐
-│  Scale down (e.g. 90%)              │
-│  Centre in destination resolution   │
-└─────────────────────────────────────┘
+┌────────────────────────────────────┐
+│  Scale down (e.g. 90%)             │
+│  Centre in destination resolution  │
+└────────────────────────────────────┘
             │  render
             ▼
-┌─────────────────────────────────────┐
-│  Destination monitor (fullscreen)   │
+┌────────────────────────────────────┐
+│  Destination monitor (fullscreen)  │
 │  ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░  │  ← overscan border (eaten by display)
 │  ░░ ┌────────────────────────┐ ░░  │
 │  ░░ │   your desktop content │ ░░  │  ← visible content, fully inside
 │  ░░ └────────────────────────┘ ░░  │
 │  ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░  │
-└─────────────────────────────────────┘
+└────────────────────────────────────┘
 ```
 
 1. **Capture** — A background thread continuously grabs frames from the source monitor.
