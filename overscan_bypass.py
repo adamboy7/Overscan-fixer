@@ -236,55 +236,44 @@ def main():
     tex_id = _create_texture(src_mon['width'], src_mon['height'])
 
     # ── Background capture thread with DXGI recovery ──────────────────────────
+    # One-shot grab() mode: each call is independent so DXGI errors propagate
+    # directly to our except handler instead of dying silently in dxcam's thread.
     cam_ref    = [dxcam.create(output_idx=args.src)]
-    cam_ref[0].start(target_fps=args.fps)
 
     latest_frame = [None]
     frame_lock   = threading.Lock()
     stop_event   = threading.Event()
 
     def _recreate_camera():
-        try:
-            cam_ref[0].stop()
-        except Exception as e:
-            print(f"Warning: error stopping camera: {e}", file=sys.stderr)
+        cam_ref[0] = None  # release old camera; GC frees DXGI resources
         for attempt in range(20):
             if stop_event.is_set():
                 return
             try:
                 cam_ref[0] = dxcam.create(output_idx=args.src)
-                cam_ref[0].start(target_fps=args.fps)
                 print("Camera recovered.")
                 return
             except Exception:
                 stop_event.wait(min(1.0 * (attempt + 1), 5.0))
         print("Warning: camera recovery failed after 20 attempts — display frozen.", file=sys.stderr)
 
-    # STALL_TIMEOUT: seconds of no new frames before assuming camera died silently
-    STALL_TIMEOUT = 3.0
+    _FRAME_INTERVAL = 1.0 / args.fps
 
     def _capture_loop():
-        last_new_frame = time.monotonic()
-        prev_frame = None
         while not stop_event.is_set():
+            t0 = time.monotonic()
             try:
-                f = cam_ref[0].get_latest_frame()
+                f = cam_ref[0].grab()
             except Exception:
                 _recreate_camera()
-                last_new_frame = time.monotonic()
-                prev_frame = None
                 continue
-
-            if f is not None and f is not prev_frame:
+            if f is not None:
                 with frame_lock:
                     latest_frame[0] = f
-                last_new_frame = time.monotonic()
-                prev_frame = f
-            elif time.monotonic() - last_new_frame > STALL_TIMEOUT:
-                # dxcam's internal thread died — same stale frame returned in loop
-                _recreate_camera()
-                last_new_frame = time.monotonic()
-                prev_frame = None
+            elapsed = time.monotonic() - t0
+            remaining = _FRAME_INTERVAL - elapsed
+            if remaining > 0:
+                stop_event.wait(remaining)
 
     capture_thread = threading.Thread(target=_capture_loop, daemon=True)
     capture_thread.start()
@@ -349,10 +338,7 @@ def main():
         capture_thread.join(timeout=2.0)
         if capture_thread.is_alive():
             print("Warning: capture thread did not exit cleanly.", file=sys.stderr)
-        try:
-            cam_ref[0].stop()
-        except Exception:
-            pass
+        cam_ref[0] = None  # release DXGI resources
         glDeleteTextures([tex_id])
         pygame.quit()
 
