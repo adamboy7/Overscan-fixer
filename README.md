@@ -116,7 +116,7 @@ python overscan_bypass_cpu.py --list
 
 ### Finding the right scale
 
-Run with `--list` first to confirm which monitor index is which. Then launch without `--scale` — the app will auto-fit the source into the destination. If content is still clipped, lower the scale in 2.5% steps with the `-` hotkey until everything is visible, then note the value and hard-code it with `--scale` for future runs.
+Run with `--list` first to confirm which monitor index is which. Then launch without `--scale` — the app will auto-fit the source into the destination. If content is still clipped, adjust the scale with the `+`/`-` hotkeys until everything is visible. The app saves your scale automatically and restores it on the next run.
 
 ---
 
